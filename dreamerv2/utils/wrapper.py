@@ -4,35 +4,73 @@ import minatar
 import gym
 import numpy as np
 
+pomdp_index = {
+    'breakout': [0, 1, 3],
+    'seaquest': [0, 1, 2, 4, 5, 6, 7, 8, 9],
+    'space_invaders': [0, 1, 4, 5],
+    'asterix': [0, 1, 3],
+    'freeway': [0, 1],
+}
+
 
 class GymMinAtar(gym.Env):
     metadata = {'render.modes': ['human', 'rgb_array']}
 
-    def __init__(self, env_name, display_time=50):
+    def __init__(self, env_name, display_time=50, obs_type="pixel"):
         self.display_time = display_time
         self.env_name = env_name
         self.env = minatar.Environment(env_name)
+        # obs_type: 'pixel', 'mdp' or 'pomdp'
+        self.obs_type = obs_type
+
         self.minimal_actions = self.env.minimal_action_set()
-        h, w, c = self.env.state_shape()
         self.action_space = gym.spaces.Discrete(len(self.minimal_actions))
-        self.observation_space = gym.spaces.MultiBinary((c, h, w))
+
+        h, w, c = self.env.state_shape()
+        if obs_type == "pixel":
+            from matplotlib import colors
+            import seaborn as sns
+
+            self.observation_space = gym.spaces.Box(0, 1, (3, h, w))
+            self.cmap = sns.color_palette("cubehelix", self.env.n_channels)
+            self.cmap.insert(0, (0, 0, 0))
+            self.cmap = colors.ListedColormap(self.cmap)
+        elif obs_type == "mdp":
+            self.observation_space = gym.spaces.MultiBinary((c, h, w))
+        elif obs_type == "pomdp":
+            self.observation_space = gym.spaces.MultiBinary((len(pomdp_index[env_name]), h, w))
+
+    def get_obs(self):
+        state = self.env.state()
+        if self.obs_type == "pixel":
+            rgb_array = self.render('rgb_array')
+            return rgb_array.transpose(2, 0, 1) - 0.5
+        elif self.obs_type == "mdp":
+            return state.transpose(2, 0, 1)
+        elif self.obs_type == "pomdp":
+            obs = []
+            for i in pomdp_index[self.env_name]:
+                obs.append(state[:, :, i])
+            return np.stack(obs, axis=0)
 
     def reset(self, seed: Optional[int] = None, **kwargs):
-        self.env = minatar.Environment(self.env_name, random_seed=seed)
-        return self.env.state().transpose(2, 0, 1), {}
+        self.env = minatar.Environment(self.env_name)
+        self.env.seed(seed)
+        return self.get_obs(), {}
 
     def step(self, index):
         '''index is the action id, considering only the set of minimal actions'''
         action = self.minimal_actions[index]
         r, terminal = self.env.act(action)
         self.game_over = terminal
-        return self.env.state().transpose(2, 0, 1), r, terminal, False, {}
+        return self.get_obs(), r, terminal, False, {}
 
-    def render(self, mode='human'):
-        if mode == 'rgb_array':
-            return self.env.state()
-        elif mode == 'human':
-            self.env.display_state(self.display_time)
+    def render(self, mode='rgb_array'):
+        assert mode == 'rgb_array', 'Only support rgb_array mode'
+        state = self.env.state()
+
+        numerical_state = np.amax(state * np.reshape(np.arange(self.env.n_channels) + 1, (1, 1, -1)), 2)
+        return self.cmap(numerical_state)[..., :3]
 
     def close(self):
         if self.env.visualized:
@@ -49,55 +87,6 @@ class breakoutPOMDP(gym.ObservationWrapper):
 
     def observation(self, observation):
         return np.stack([observation[0], observation[1], observation[3]], axis=0)
-
-
-class asterixPOMDP(gym.ObservationWrapper):
-    '''index 2 (trail) is removed, which gives ball's direction'''
-
-    def __init__(self, env):
-        super(asterixPOMDP, self).__init__(env)
-        c, h, w = env.observation_space.shape
-        self.observation_space = gym.spaces.MultiBinary((c - 1, h, w))
-
-    def observation(self, observation):
-        return np.stack([observation[0], observation[1], observation[3]], axis=0)
-
-
-class freewayPOMDP(gym.ObservationWrapper):
-    '''index 2-6 (trail and speed) are removed, which gives cars' speed and direction'''
-
-    def __init__(self, env):
-        super(freewayPOMDP, self).__init__(env)
-        c, h, w = env.observation_space.shape
-        self.observation_space = gym.spaces.MultiBinary((c - 5, h, w))
-
-    def observation(self, observation):
-        return np.stack([observation[0], observation[1]], axis=0)
-
-
-class space_invadersPOMDP(gym.ObservationWrapper):
-    '''index 2-3 (trail) are removed, which gives aliens' direction'''
-
-    def __init__(self, env):
-        super(space_invadersPOMDP, self).__init__(env)
-        c, h, w = env.observation_space.shape
-        self.observation_space = gym.spaces.MultiBinary((c - 2, h, w))
-
-    def observation(self, observation):
-        return np.stack([observation[0], observation[1], observation[4], observation[5]], axis=0)
-
-
-class seaquestPOMDP(gym.ObservationWrapper):
-    '''index 3 (trail) is removed, which gives enemy and driver's direction'''
-
-    def __init__(self, env):
-        super(seaquestPOMDP, self).__init__(env)
-        c, h, w = env.observation_space.shape
-        self.observation_space = gym.spaces.MultiBinary((c - 1, h, w))
-
-    def observation(self, observation):
-        return np.stack([observation[0], observation[1], observation[2], observation[4], observation[5], observation[6],
-                         observation[7], observation[8], observation[9]], axis=0)
 
 
 class ActionRepeat(gym.Wrapper):

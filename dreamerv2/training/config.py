@@ -32,6 +32,7 @@ class MinAtarConfig():
     eval_episode: int = 4
     eval_render: bool = True
     save_every: int = int(1e5)
+    eval_every: int = int(1e3)
     seed_steps: int = 4000
     model_dir: str = 'results'
     gif_dir: str = 'results'
