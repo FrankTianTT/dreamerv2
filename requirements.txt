@@ -1,7 +1,7 @@
 gym>=0.26.2
 imageio>=2.23.0
 ipdb>=0.13.11
-MinAtar>=1.0.12
+minatar==1.0.13
 numpy>=1.23.5
 Pillow>=9.4.0
 scikit_learn>=1.2.1

@@ -13,11 +13,13 @@ from dreamerv2.training.evaluator import Evaluator
 def main(args):
     wandb.login()
     env_name = args.env
-    exp_id = args.id + '_pomdp'
+    exp_id = '{}_{}'.format(args.id, args.obs_type)
 
     '''make dir for saving results'''
     result_dir = os.path.join('results', '{}_{}'.format(env_name, exp_id))
     model_dir = os.path.join(result_dir, 'models')  # dir to save learnt models
+    gif_dir = os.path.join(result_dir, 'visualization')
+
     os.makedirs(model_dir, exist_ok=True)
 
     np.random.seed(args.seed)
@@ -29,10 +31,14 @@ def main(args):
         device = torch.device('cpu')
     print('using :', device)
 
-    env = OneHotAction(GymMinAtar(env_name, obs_type='pomdp'))
+    env = OneHotAction(GymMinAtar(env_name, obs_type=args.obs_type))
+    test_env = OneHotAction(GymMinAtar(env_name, obs_type=args.obs_type))
     obs_shape = env.observation_space.shape
     action_size = env.action_space.shape[0]
-    obs_dtype = np.dtype(bool)
+    if args.obs_type == 'pixel':
+        obs_dtype = np.dtype(np.float32)
+    else:
+        obs_dtype = np.dtype(bool)
     action_dtype = np.dtype(np.float32)
     batch_size = args.batch_size
     seq_len = args.seq_len
@@ -46,16 +52,18 @@ def main(args):
         seq_len=seq_len,
         batch_size=batch_size,
         model_dir=model_dir,
+        gif_dir=gif_dir
     )
 
     config_dict = config.__dict__
     trainer = Trainer(config, device)
-    evaluator = Evaluator(config, device)
+    evaluator = Evaluator(config, device, visualize=True if args.obs_type == 'pixel' else False)
 
     with wandb.init(project='mastering MinAtar with world models', config=config_dict):
         """training loop"""
         print('...training...')
         train_metrics = {}
+        eval_metrics = {}
         trainer.collect_seed_episodes(env)
         (obs, _), score = env.reset(), 0
         done = False
@@ -66,13 +74,21 @@ def main(args):
         best_mean_score = 0
         train_episodes = 0
         best_save_path = os.path.join(model_dir, 'models_best.pth')
-        for iter in range(1, trainer.config.train_steps):
+        for iter in range(0, trainer.config.train_steps):
             if iter % trainer.config.train_every == 0:
                 train_metrics = trainer.train_batch(train_metrics)
             if iter % trainer.config.slow_target_update == 0:
                 trainer.update_target()
             if iter % trainer.config.save_every == 0:
                 trainer.save_model(iter)
+            if iter % trainer.config.eval_every == 0:
+                # pass
+                eval_score = evaluator.eval_agent(test_env, trainer.RSSM, trainer.ObsEncoder, trainer.ObsDecoder,
+                                                  trainer.ActionModel, iter)
+                eval_metrics["eval_rewards"] = eval_score
+                if eval_score > best_mean_score:
+                    best_mean_score = eval_score
+                    trainer.save_model(iter)
             with torch.no_grad():
                 embed = trainer.ObsEncoder(torch.tensor(obs, dtype=torch.float32).unsqueeze(0).to(trainer.device))
                 _, posterior_rssm_state = trainer.RSSM.rssm_observe(embed, prev_action, not done, prev_rssmstate)
@@ -91,7 +107,11 @@ def main(args):
                 train_metrics['train_rewards'] = score
                 train_metrics['action_ent'] = np.mean(episode_actor_ent)
                 train_metrics['train_steps'] = iter
+                if len(eval_metrics) > 0:
+                    wandb.log(eval_metrics, step=train_episodes, commit=False)
+                    eval_metrics = {}
                 wandb.log(train_metrics, step=train_episodes)
+
                 scores.append(score)
                 if len(scores) > 100:
                     scores.pop(0)
@@ -114,7 +134,7 @@ def main(args):
                 prev_action = action
 
     '''evaluating probably best model'''
-    evaluator.eval_saved_agent(env, best_save_path)
+    # evaluator.eval_saved_agent(env, best_save_path)
 
 
 if __name__ == "__main__":
@@ -122,9 +142,10 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--env", type=str, default="breakout", help='mini atari env name')
     parser.add_argument("--id", type=str, default='0', help='Experiment ID')
+    parser.add_argument("--obs_type", type=str, default='pixel')
     parser.add_argument('--seed', type=int, default=123, help='Random seed')
     parser.add_argument('--device', default='cuda', help='CUDA or CPU')
-    parser.add_argument('--batch_size', type=int, default=50, help='Batch size')
-    parser.add_argument('--seq_len', type=int, default=50, help='Sequence Length (chunk length)')
+    parser.add_argument('--batch_size', type=int, default=100, help='Batch size')
+    parser.add_argument('--seq_len', type=int, default=25, help='Sequence Length (chunk length)')
     args = parser.parse_args()
     main(args)

@@ -16,11 +16,13 @@ class Evaluator(object):
             self,
             config,
             device,
+            visualize=False
     ):
         self.device = device
         self.config = config
         self.action_size = config.action_size
         self.visualizer = Visualizer(config)
+        self.visualize = visualize
 
     def load_model(self, config, model_path):
         saved_dict = torch.load(model_path)
@@ -71,7 +73,7 @@ class Evaluator(object):
                 with torch.no_grad():
                     embed = ObsEncoder(torch.tensor(obs, dtype=torch.float32).unsqueeze(0).to(self.device))
                     _, posterior_rssm_state = RSSM.rssm_observe(embed, prev_action, not done, prev_rssmstate)
-                    if e < 2:
+                    if e < 2 and self.visualize:
                         self.visualizer.collect_frames((torch.tensor(obs, dtype=torch.float32)), posterior_rssm_state,
                                                        ObsDecoder, video_frames_dict)
                     model_state = RSSM.get_model_state(posterior_rssm_state)
@@ -83,7 +85,7 @@ class Evaluator(object):
                     env.render()
                 score += rew
                 obs = next_obs
-            if e < 2:
+            if e < 2 and self.visualize:
                 self.visualizer.output_video(train_step, e, video_frames_dict)
             eval_scores.append(score)
         print('average evaluation score for model at ' + ' = ' + str(np.mean(eval_scores)))
