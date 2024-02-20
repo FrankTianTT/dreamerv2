@@ -24,9 +24,13 @@ def main(args):
 
     np.random.seed(args.seed)
     torch.manual_seed(args.seed)
-    if torch.cuda.is_available() and args.device:
-        device = torch.device('cuda')
+    if args.device.startswith('cuda') and torch.cuda.is_available():
+        device = torch.device(args.device)
         torch.cuda.manual_seed(args.seed)
+        torch.backends.cudnn.deterministic = True
+        torch.backends.cudnn.benchmark = False
+    elif args.device == 'mps':
+        device = torch.device('mps')
     else:
         device = torch.device('cpu')
     print('using :', device)
@@ -65,7 +69,7 @@ def main(args):
         train_metrics = {}
         eval_metrics = {}
         trainer.collect_seed_episodes(env)
-        (obs, _), score = env.reset(), 0
+        (obs, _), score, length = env.reset(), 0, 0
         done = False
         prev_rssmstate = trainer.RSSM._init_rssm_state(1)
         prev_action = torch.zeros(1, trainer.action_size).to(trainer.device)
@@ -83,9 +87,11 @@ def main(args):
                 trainer.save_model(iter)
             if iter % trainer.config.eval_every == 0:
                 # pass
-                eval_score = evaluator.eval_agent(test_env, trainer.RSSM, trainer.ObsEncoder, trainer.ObsDecoder,
-                                                  trainer.ActionModel, iter)
+                eval_score, eval_length = evaluator.eval_agent(test_env, trainer.RSSM, trainer.ObsEncoder,
+                                                               trainer.ObsDecoder,
+                                                               trainer.ActionModel, iter)
                 eval_metrics["eval_rewards"] = eval_score
+                eval_metrics["eval_length"] = eval_length
                 if eval_score > best_mean_score:
                     best_mean_score = eval_score
                     trainer.save_model(iter)
@@ -100,11 +106,13 @@ def main(args):
 
             next_obs, rew, done, timeout, _ = env.step(action.squeeze(0).cpu().numpy())
             score += rew
+            length += 1
 
             if done:
                 train_episodes += 1
                 trainer.buffer.add(obs, action.squeeze(0).cpu().numpy(), rew, done)
                 train_metrics['train_rewards'] = score
+                train_metrics['train_length'] = length
                 train_metrics['action_ent'] = np.mean(episode_actor_ent)
                 train_metrics['train_steps'] = iter
                 if len(eval_metrics) > 0:
@@ -122,7 +130,7 @@ def main(args):
                         save_dict = trainer.get_save_dict()
                         torch.save(save_dict, best_save_path)
 
-                (obs, _), score = env.reset(), 0
+                (obs, _), score, length = env.reset(), 0, 0
                 done = False
                 prev_rssmstate = trainer.RSSM._init_rssm_state(1)
                 prev_action = torch.zeros(1, trainer.action_size).to(trainer.device)

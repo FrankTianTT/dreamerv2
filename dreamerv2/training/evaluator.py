@@ -63,8 +63,9 @@ class Evaluator(object):
     def eval_agent(self, env, RSSM, ObsEncoder, ObsDecoder, ActionModel, train_step):
         eval_episode = self.config.eval_episode
         eval_scores = []
+        eval_lengths = []
         for e in range(eval_episode):
-            (obs, _), score = env.reset(), 0
+            (obs, _), score, length = env.reset(), 0, 0
             done = False
             prev_rssmstate = RSSM._init_rssm_state(1)
             prev_action = torch.zeros(1, self.action_size).to(self.device)
@@ -81,13 +82,15 @@ class Evaluator(object):
                     prev_rssmstate = posterior_rssm_state
                     prev_action = action
                 next_obs, rew, done, timeout, _ = env.step(action.squeeze(0).cpu().numpy())
-                if self.config.eval_render:
-                    env.render()
+                # if self.config.eval_render:
+                #     env.render()
                 score += rew
+                length += 1
                 obs = next_obs
             if e < 2 and self.visualize:
                 self.visualizer.output_video(train_step, e, video_frames_dict)
             eval_scores.append(score)
+            eval_lengths.append(length)
         print('average evaluation score for model at ' + ' = ' + str(np.mean(eval_scores)))
         env.close()
-        return np.mean(eval_scores)
+        return np.mean(eval_scores), np.mean(eval_lengths)
