@@ -49,7 +49,7 @@ def main(args):
     obs_shape = env.observation_space.shape
     action_size = env.action_space.shape[0]
     if args.obs_type == 'pixel':
-        obs_dtype = np.dtype(np.float32)
+        obs_dtype = np.dtype(np.uint8)
     else:
         obs_dtype = np.dtype(np.float32)
     action_dtype = np.dtype(np.float32)
@@ -87,6 +87,7 @@ def main(args):
         best_mean_score = 0
         train_episodes = 0
         best_save_path = os.path.join(model_dir, 'models_best.pth')
+
         for iter in range(0, trainer.config.train_steps):
             if iter % trainer.config.train_every == 0:
                 train_metrics = trainer.train_batch(train_metrics)
@@ -159,7 +160,7 @@ if __name__ == "__main__":
     parser.add_argument("--env", type=str, default="breakout", help='mini atari env name')
     parser.add_argument("--id", type=str, default='0', help='Experiment ID')
     parser.add_argument("--obs_type", type=str, default='pixel')
-    parser.add_argument("--noise_alpha", type=float, default=0.3, help='noise alpha')
+    parser.add_argument("--noise_alpha", type=float, default=0., help='noise alpha')
     parser.add_argument('--seed', type=int, default=0, help='Random seed')
     parser.add_argument('--device', default='cuda', help='CUDA or CPU')
     parser.add_argument('--batch_size', type=int, default=50, help='Batch size')
@@ -167,7 +168,7 @@ if __name__ == "__main__":
     args = parser.parse_args()
     main(args)
 
-# python test/mini_atari.py --env breakout --id 0 --seed 0
+# python test/mini_atari.py --env breakout --id 1 --seed 1
 # python test/mini_atari.py --env freeway --id 0 --seed 0
 # python test/mini_atari.py --env space_invaders --id 0 --seed 0
 # python test/mini_atari.py --env seaquest --id 0 --seed 0

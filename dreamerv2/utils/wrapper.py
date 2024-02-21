@@ -114,7 +114,7 @@ class GymMinAtar(gym.Env):
             mask = (rgb_array == (0, 0, 0)).astype(float) * self.noise_alpha
             img = self.img_source.get_image()
             rgb_array = rgb_array * (1 - mask) + img * mask
-        return rgb_array
+        return rgb_array.astype(np.float32)
 
     def close(self):
         if self.env.visualized:

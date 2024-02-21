@@ -19,13 +19,13 @@ class MinAtarConfig():
     action_repeat: int = 1
 
     # buffer desc
-    capacity: int = int(1e6)
+    capacity: int = int(1e5)
     obs_dtype: np.dtype = np.uint8
     action_dtype: np.dtype = np.float32
 
     # training desc
     train_steps: int = int(5e6)
-    train_every: int = 50  # reduce this to potentially improve sample requirements
+    train_every: int = 100  # reduce this to potentially improve sample requirements
     collect_intervals: int = 5
     batch_size: int = 50
     seq_len: int = 50
@@ -33,7 +33,7 @@ class MinAtarConfig():
     eval_render: bool = True
     save_every: int = int(1e5)
     eval_every: int = int(1e4)
-    seed_steps: int = 4000
+    seed_steps: int = 400
     model_dir: str = 'results'
     gif_dir: str = 'results'
 
