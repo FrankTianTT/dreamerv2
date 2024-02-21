@@ -3,6 +3,11 @@ from typing import Optional
 import minatar
 import gym
 import numpy as np
+import os
+from matplotlib import colors
+import seaborn as sns
+from scipy import ndimage
+from dreamerv2.utils.imgsource import RandomVideoSource, RandomImageSource
 
 pomdp_index = {
     'breakout': [0, 1, 3],
@@ -16,22 +21,32 @@ pomdp_index = {
 class GymMinAtar(gym.Env):
     metadata = {'render.modes': ['human', 'rgb_array']}
 
-    def __init__(self, env_name, display_time=50, obs_type="pixel"):
+    def __init__(
+            self,
+            env_name,
+            display_time=50,
+            obs_type="pixel",
+            noise_alpha=0.3,
+            pixel_size=40,
+            noise_type=None,
+            resource_dir=None
+    ):
         self.display_time = display_time
         self.env_name = env_name
         self.env = minatar.Environment(env_name)
         # obs_type: 'pixel', 'mdp' or 'pomdp'
         self.obs_type = obs_type
+        self.noise_alpha = noise_alpha
+        self.pixel_size = pixel_size
+        self.noise_type = noise_type
+        self.resource_dir = resource_dir
 
         self.minimal_actions = self.env.minimal_action_set()
         self.action_space = gym.spaces.Discrete(len(self.minimal_actions))
 
         h, w, c = self.env.state_shape()
         if obs_type == "pixel":
-            from matplotlib import colors
-            import seaborn as sns
-
-            self.observation_space = gym.spaces.Box(0, 1, (3, h, w))
+            self.observation_space = gym.spaces.Box(0, 1, (3, self.pixel_size, self.pixel_size))
             self.cmap = sns.color_palette("cubehelix", self.env.n_channels)
             self.cmap.insert(0, (0, 0, 0))
             self.cmap = colors.ListedColormap(self.cmap)
@@ -40,11 +55,26 @@ class GymMinAtar(gym.Env):
         elif obs_type == "pomdp":
             self.observation_space = gym.spaces.MultiBinary((len(pomdp_index[env_name]), h, w))
 
+        if self.noise_type is None or self.noise_alpha == 0:
+            self.img_source, self.resource_files = None, None
+        elif self.noise_type == "videos":
+            self.resource_files = [os.path.join(resource_dir, f)
+                                   for f in os.listdir(self.resource_dir)
+                                   if f.endswith('.mp4')]
+            self.img_source = RandomVideoSource((self.pixel_size, self.pixel_size), self.resource_files)
+        elif self.noise_type == "images":
+            self.resource_files = [os.path.join(resource_dir, f)
+                                   for f in os.listdir(self.resource_dir)
+                                   if f.endswith('.png') or f.endswith('.jpg') or f.endswith('.jpeg')]
+            self.img_source = RandomImageSource((self.pixel_size, self.pixel_size), self.resource_files)
+        else:
+            raise ValueError("Invalid noise source")
+
     def get_obs(self):
         state = self.env.state()
         if self.obs_type == "pixel":
             rgb_array = self.render('rgb_array')
-            return rgb_array.transpose(2, 0, 1) - 0.5
+            return rgb_array.transpose(2, 0, 1)
         elif self.obs_type == "mdp":
             return state.transpose(2, 0, 1)
         elif self.obs_type == "pomdp":
@@ -56,6 +86,8 @@ class GymMinAtar(gym.Env):
     def reset(self, seed: Optional[int] = None, **kwargs):
         self.env = minatar.Environment(self.env_name)
         self.env.seed(seed)
+        if self.img_source:
+            self.img_source.reset()
         return self.get_obs(), {}
 
     def step(self, index):
@@ -67,10 +99,22 @@ class GymMinAtar(gym.Env):
 
     def render(self, mode='rgb_array'):
         assert mode == 'rgb_array', 'Only support rgb_array mode'
+
         state = self.env.state()
 
         numerical_state = np.amax(state * np.reshape(np.arange(self.env.n_channels) + 1, (1, 1, -1)), 2)
-        return self.cmap(numerical_state)[..., :3]
+        rgb_array = self.cmap(numerical_state)[..., :3]  # shape: (10, 10, 3)
+        rgb_array = ndimage.zoom(
+            rgb_array,
+            zoom=(self.pixel_size / rgb_array.shape[0], self.pixel_size / rgb_array.shape[1], 1),
+            mode="nearest",
+            order=0
+        )
+        if self.img_source:
+            mask = (rgb_array == (0, 0, 0)).astype(float) * self.noise_alpha
+            img = self.img_source.get_image()
+            rgb_array = rgb_array * (1 - mask) + img * mask
+        return rgb_array
 
     def close(self):
         if self.env.visualized:

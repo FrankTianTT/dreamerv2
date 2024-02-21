@@ -12,4 +12,5 @@ imageio[ffmpeg]>=2.26.0
 imageio[pyav]>=2.26.0
 wandb>=0.14.0
 opencv-python>=4.7.0.72
-torch>=2.2.0
+torch>=2.0.0
+scikit-video>=1.1.11

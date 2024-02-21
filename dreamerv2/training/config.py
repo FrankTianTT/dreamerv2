@@ -32,7 +32,7 @@ class MinAtarConfig():
     eval_episode: int = 4
     eval_render: bool = True
     save_every: int = int(1e5)
-    eval_every: int = int(1e3)
+    eval_every: int = int(1e4)
     seed_steps: int = 4000
     model_dir: str = 'results'
     gif_dir: str = 'results'
@@ -73,10 +73,10 @@ class MinAtarConfig():
 
     # learnt world-models desc
     obs_encoder: Dict = field(
-        default_factory=lambda: {'layers': 3, 'node_size': 100, 'dist': None, 'activation': nn.ELU, 'kernel': 3,
+        default_factory=lambda: {'layers': 3, 'node_size': 100, 'dist': None, 'activation': nn.ELU, 'kernel': 4,
                                  'depth': 16})
     obs_decoder: Dict = field(
-        default_factory=lambda: {'layers': 3, 'node_size': 100, 'dist': 'normal', 'activation': nn.ELU, 'kernel': 3,
+        default_factory=lambda: {'layers': 3, 'node_size': 100, 'dist': 'normal', 'activation': nn.ELU, 'kernel': 4,
                                  'depth': 16})
     reward: Dict = field(
         default_factory=lambda: {'layers': 3, 'node_size': 100, 'dist': 'normal', 'activation': nn.ELU})
@@ -149,10 +149,10 @@ class MiniGridConfig():
 
     # learnt world-models desc
     obs_encoder: Dict = field(
-        default_factory=lambda: {'layers': 3, 'node_size': 100, 'dist': None, 'activation': nn.ELU, 'kernel': 2,
+        default_factory=lambda: {'layers': 3, 'node_size': 100, 'dist': None, 'activation': nn.ELU, 'kernel': 3,
                                  'depth': 16})
     obs_decoder: Dict = field(
-        default_factory=lambda: {'layers': 3, 'node_size': 100, 'dist': 'normal', 'activation': nn.ELU, 'kernel': 2,
+        default_factory=lambda: {'layers': 3, 'node_size': 100, 'dist': 'normal', 'activation': nn.ELU, 'kernel': 3,
                                  'depth': 16})
     reward: Dict = field(
         default_factory=lambda: {'layers': 3, 'node_size': 100, 'dist': 'normal', 'activation': nn.ELU})

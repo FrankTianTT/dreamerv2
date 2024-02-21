@@ -33,10 +33,10 @@ class Visualizer(object):
         rgb_array = torch.cat([
             self.obs_to_image(torch.unsqueeze(obs, dim=0).cpu()),
             self.obs_to_image(reconstruction.cpu())
-        ], dim=-1).add_(0.5)
+        ], dim=-1)
 
         rgb_array = interpolate(rgb_array, size=(rgb_array.shape[-2] * 16, rgb_array.shape[-1] * 16))
-        rgb_array = rgb_array.mul_(255).clamp_(0, 255).to(torch.uint8)
+        rgb_array = rgb_array.clamp_(0, 255).to(torch.uint8)
         video_frames_dict['poster'].append(rgb_array[0])
 
     def write_video(self, frames: List[torch.Tensor], title, path="", fps=20):

@@ -1,6 +1,7 @@
 import wandb
 import argparse
 import os
+import platform
 import torch
 import numpy as np
 import gym
@@ -35,14 +36,22 @@ def main(args):
         device = torch.device('cpu')
     print('using :', device)
 
-    env = OneHotAction(GymMinAtar(env_name, obs_type=args.obs_type))
-    test_env = OneHotAction(GymMinAtar(env_name, obs_type=args.obs_type))
+    env_kwargs = dict(
+        env_name=env_name,
+        obs_type=args.obs_type,
+        noise_type="videos",
+        resource_dir="/home/featurize/.driving_car"
+        if platform.platform().startswith('Linux') else "/Users/frank/Desktop/1",
+        noise_alpha=args.noise_alpha,
+    )
+    env = OneHotAction(GymMinAtar(**env_kwargs))
+    test_env = OneHotAction(GymMinAtar(**env_kwargs))
     obs_shape = env.observation_space.shape
     action_size = env.action_space.shape[0]
     if args.obs_type == 'pixel':
         obs_dtype = np.dtype(np.float32)
     else:
-        obs_dtype = np.dtype(bool)
+        obs_dtype = np.dtype(np.float32)
     action_dtype = np.dtype(np.float32)
     batch_size = args.batch_size
     seq_len = args.seq_len
@@ -86,7 +95,6 @@ def main(args):
             if iter % trainer.config.save_every == 0:
                 trainer.save_model(iter)
             if iter % trainer.config.eval_every == 0:
-                # pass
                 eval_score, eval_length = evaluator.eval_agent(test_env, trainer.RSSM, trainer.ObsEncoder,
                                                                trainer.ObsDecoder,
                                                                trainer.ActionModel, iter)
@@ -151,9 +159,15 @@ if __name__ == "__main__":
     parser.add_argument("--env", type=str, default="breakout", help='mini atari env name')
     parser.add_argument("--id", type=str, default='0', help='Experiment ID')
     parser.add_argument("--obs_type", type=str, default='pixel')
-    parser.add_argument('--seed', type=int, default=123, help='Random seed')
+    parser.add_argument("--noise_alpha", type=float, default=0.3, help='noise alpha')
+    parser.add_argument('--seed', type=int, default=0, help='Random seed')
     parser.add_argument('--device', default='cuda', help='CUDA or CPU')
-    parser.add_argument('--batch_size', type=int, default=100, help='Batch size')
-    parser.add_argument('--seq_len', type=int, default=25, help='Sequence Length (chunk length)')
+    parser.add_argument('--batch_size', type=int, default=50, help='Batch size')
+    parser.add_argument('--seq_len', type=int, default=50, help='Sequence Length (chunk length)')
     args = parser.parse_args()
     main(args)
+
+# python test/mini_atari.py --env breakout --id 0 --seed 0
+# python test/mini_atari.py --env freeway --id 0 --seed 0
+# python test/mini_atari.py --env space_invaders --id 0 --seed 0
+# python test/mini_atari.py --env seaquest --id 0 --seed 0
