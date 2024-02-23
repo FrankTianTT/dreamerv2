@@ -7,8 +7,9 @@ import numpy as np
 import gym
 from dreamerv2.utils.wrapper import GymMinAtar, OneHotAction
 from dreamerv2.training.config import MinAtarConfig
-from dreamerv2.training.trainer import Trainer
-from dreamerv2.training.evaluator import Evaluator
+# from dreamerv2.training.trainer import Trainer
+from dreamerv2.training.if_trainer import IFTrainer
+from dreamerv2.training.if_evaluator import Evaluator
 
 
 def main(args):
@@ -69,7 +70,7 @@ def main(args):
     )
 
     config_dict = config.__dict__
-    trainer = Trainer(config, device)
+    trainer = IFTrainer(config, device)
     evaluator = Evaluator(config, device, visualize=True if args.obs_type == 'pixel' else False)
 
     with wandb.init(project='mastering MinAtar with world models', config=config_dict):
@@ -107,8 +108,8 @@ def main(args):
             with torch.no_grad():
                 embed = trainer.ObsEncoder(torch.tensor(obs, dtype=torch.float32).unsqueeze(0).to(trainer.device))
                 _, posterior_rssm_state = trainer.RSSM.rssm_observe(embed, prev_action, not done, prev_rssmstate)
-                model_state = trainer.RSSM.get_model_state(posterior_rssm_state)
-                action, action_dist = trainer.ActionModel(model_state)
+                asr_state = trainer.RSSM.get_asr_state(posterior_rssm_state)
+                action, action_dist = trainer.ActionModel(asr_state)
                 action = trainer.ActionModel.add_exploration(action, iter).detach()
                 action_ent = torch.mean(action_dist.entropy()).item()
                 episode_actor_ent.append(action_ent)
@@ -160,7 +161,7 @@ if __name__ == "__main__":
     parser.add_argument("--env", type=str, default="breakout", help='mini atari env name')
     parser.add_argument("--id", type=str, default='0', help='Experiment ID')
     parser.add_argument("--obs_type", type=str, default='pixel')
-    parser.add_argument("--noise_alpha", type=float, default=0., help='noise alpha')
+    parser.add_argument("--noise_alpha", type=float, default=0.3, help='noise alpha')
     parser.add_argument('--seed', type=int, default=0, help='Random seed')
     parser.add_argument('--device', default='cuda', help='CUDA or CPU')
     parser.add_argument('--batch_size', type=int, default=50, help='Batch size')
@@ -168,7 +169,7 @@ if __name__ == "__main__":
     args = parser.parse_args()
     main(args)
 
-# python test/mini_atari.py --env breakout --id 1 --seed 1
-# python test/mini_atari.py --env freeway --id 0 --seed 0
-# python test/mini_atari.py --env space_invaders --id 0 --seed 0
-# python test/mini_atari.py --env seaquest --id 0 --seed 0
+# python test/if_mini_atari.py --env breakout --id 0 --seed 0
+# python test/if_mini_atari.py --env freeway --id 0 --seed 0
+# python test/if_mini_atari.py --env space_invaders --id 0 --seed 0
+# python test/if_mini_atari.py --env seaquest --id 2 --seed 2

@@ -41,9 +41,16 @@ class MinAtarConfig():
     rssm_type: str = 'discrete'
     embedding_size: int = 200
     rssm_node_size: int = 200
-    rssm_info: Dict = field(
-        default_factory=lambda: {'deter_size': 200, 'stoch_size': 20, 'class_size': 20, 'category_size': 20,
-                                 'min_std': 0.1})
+    # rssm_info: Dict = field(
+    #     default_factory=lambda: {'deter_size': 200, 'stoch_size': 20, 'class_size': 20, 'category_size': 20,
+    #                              'min_std': 0.1})
+    rssm_info: Dict = field(default_factory=lambda: {
+        'deter_size_s1': 200, 'deter_size_s2': 1, 'deter_size_s3': 1, 'deter_size_s4': 1,
+        'stoch_size_s1': 20, 'stoch_size_s2': 10, 'stoch_size_s3': 10, 'stoch_size_s4': 10,
+        'class_size': 20,
+        'category_size_s1': 20, 'category_size_s2': 1, 'category_size_s3': 1, 'category_size_s4': 1,
+        'min_std': 0.1
+    })
 
     # objective desc
     grad_clip: float = 100.0
@@ -51,7 +58,8 @@ class MinAtarConfig():
     lambda_: float = 0.95
     horizon: int = 10
     lr: Dict = field(default_factory=lambda: {'model': 2e-4, 'actor': 4e-5, 'critic': 1e-4})
-    loss_scale: Dict = field(default_factory=lambda: {'kl': 0.1, 'reward': 1.0, 'discount': 5.0})
+    loss_scale: Dict = field(default_factory=lambda: {'kl_s1': 0.1, 'kl_s2': 0.1, 'kl_s3': 0.1, 'kl_s4': 0.1,
+                                                      'reward': 1.0, 'discount': 5.0})
     kl: Dict = field(default_factory=lambda: {'use_kl_balance': True, 'kl_balance_scale': 0.8, 'use_free_nats': False,
                                               'free_nats': 0.0})
     use_slow_target: float = True
