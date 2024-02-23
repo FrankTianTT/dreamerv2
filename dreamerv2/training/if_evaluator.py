@@ -77,13 +77,18 @@ class Evaluator(object):
             prev_action = torch.zeros(1, self.action_size).to(self.device)
             video_frames_dict = {"rssm_state_1234": [], "rssm_state_1": [], "rssm_state_2": [], "rssm_state_3": [],
                                  "rssm_state_4": [], "rssm_state_12": []}
+            first_state = None
             while not done:
                 with torch.no_grad():
                     embed = ObsEncoder(torch.tensor(obs, dtype=torch.float32).unsqueeze(0).to(self.device))
                     _, posterior_rssm_state = RSSM.rssm_observe(embed, prev_action, not done, prev_rssmstate)
-                    if e < 0:
-                        self.visualizer.collect_frames((torch.tensor(obs, dtype=torch.float32)), posterior_rssm_state,
-                                                       ObsDecoder, video_frames_dict)
+                    if first_state is None:
+                        first_state = posterior_rssm_state
+                    if e < 2:
+                        self.visualizer.if_collect_frames(
+                            torch.tensor(obs, dtype=torch.float32),
+                            posterior_rssm_state, first_state, RSSM, ObsDecoder, video_frames_dict
+                        )
                     asr_state = RSSM.get_asr_state(posterior_rssm_state)
                     action, _ = ActionModel(asr_state)
                     prev_rssmstate = posterior_rssm_state
@@ -94,7 +99,7 @@ class Evaluator(object):
                 score += rew
                 length += 1
                 obs = next_obs
-            if e < 0:
+            if e < 2:
                 self.visualizer.output_video(train_step, e, video_frames_dict)
             eval_scores.append(score)
             eval_lengths.append(length)

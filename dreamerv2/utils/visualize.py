@@ -35,9 +35,37 @@ class Visualizer(object):
             self.obs_to_image(reconstruction.cpu())
         ], dim=-1)
 
-        rgb_array = interpolate(rgb_array, size=(rgb_array.shape[-2] * 16, rgb_array.shape[-1] * 16))
+        rgb_array = interpolate(rgb_array, size=(rgb_array.shape[-2] * 16, rgb_array.shape[-1] * 16)) * 255
         rgb_array = rgb_array.clamp_(0, 255).to(torch.uint8)
         video_frames_dict['poster'].append(rgb_array[0])
+
+    @torch.no_grad()
+    def if_collect_frames(self, obs, rssm_state, rssm_state_0, RSSM, ObsDecoder, video_frames_dict):
+        # Collect real vs. predicted frames for video
+        rssm_state_1234 = rssm_state
+
+        rssm_state_1 = RSSM.replace_with_state_0(rssm_state, rssm_state_0, replace_index=[2, 3, 4])
+        rssm_state_2 = RSSM.replace_with_state_0(rssm_state, rssm_state_0, replace_index=[1, 3, 4])
+        rssm_state_3 = RSSM.replace_with_state_0(rssm_state, rssm_state_0, replace_index=[1, 2, 4])
+        rssm_state_4 = RSSM.replace_with_state_0(rssm_state, rssm_state_0, replace_index=[1, 2, 3])
+        rssm_state_5 = RSSM.replace_with_state_0(rssm_state, rssm_state_0, replace_index=[3, 4])
+
+        rssm_state_dict = {"rssm_state_1234": rssm_state_1234, "rssm_state_1": rssm_state_1,
+                           "rssm_state_2": rssm_state_2, "rssm_state_3": rssm_state_3, "rssm_state_4": rssm_state_4,
+                           "rssm_state_12": rssm_state_5}
+        for key, value in rssm_state_dict.items():
+            model_state = RSSM.get_model_state(value)
+            reconstruction: torch.Tensor = ObsDecoder(model_state).mean
+
+            rgb_array = torch.cat([
+                self.obs_to_image(torch.unsqueeze(obs, dim=0).cpu()),
+                self.obs_to_image(reconstruction.cpu())
+            ], dim=-1)
+
+            rgb_array = interpolate(rgb_array, size=(rgb_array.shape[-2] * 16, rgb_array.shape[-1] * 16)) * 255
+            rgb_array = rgb_array.clamp_(0, 255).to(torch.uint8)
+
+            video_frames_dict[key].append(rgb_array[0])
 
     def write_video(self, frames: List[torch.Tensor], title, path="", fps=20):
         # with imageio.get_writer(os.path.join(path, "%s.mp4" % title), mode='I', fps=fps) as writer:
