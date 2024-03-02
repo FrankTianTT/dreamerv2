@@ -161,7 +161,7 @@ if __name__ == "__main__":
     parser.add_argument("--id", type=str, default='0', help='Experiment ID')
     parser.add_argument("--obs_type", type=str, default='pixel')
     parser.add_argument("--noise_alpha", type=float, default=0., help='noise alpha')
-    parser.add_argument('--seed', type=int, default=0, help='Random seed')
+    parser.add_argument('--seed', type=int, default=0.3, help='Random seed')
     parser.add_argument('--device', default='cuda', help='CUDA or CPU')
     parser.add_argument('--batch_size', type=int, default=50, help='Batch size')
     parser.add_argument('--seq_len', type=int, default=50, help='Sequence Length (chunk length)')
@@ -172,3 +172,4 @@ if __name__ == "__main__":
 # python test/mini_atari.py --env freeway --id 0 --seed 0
 # python test/mini_atari.py --env space_invaders --id 0 --seed 0
 # python test/mini_atari.py --env seaquest --id 0 --seed 0
+# python test/mini_atari.py --env asterix --id 0 --seed 0

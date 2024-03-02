@@ -172,4 +172,5 @@ if __name__ == "__main__":
 # python test/if_mini_atari.py --env breakout --id 0 --seed 0
 # python test/if_mini_atari.py --env freeway --id 0 --seed 0
 # python test/if_mini_atari.py --env space_invaders --id 0 --seed 0
-# python test/if_mini_atari.py --env seaquest --id 2 --seed 2
+# python test/if_mini_atari.py --env seaquest --id 0 --seed 0
+# python test/if_mini_atari.py --env asterix --id 0 --seed 0

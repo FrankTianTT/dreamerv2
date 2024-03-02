@@ -43,10 +43,10 @@ class MinAtarConfig():
     rssm_node_size: int = 200
     rssm_info: Dict = field(default_factory=lambda: {
         'deter_size': 200, 'stoch_size': 20, 'category_size': 20,
-        'deter_size_s1': 200, 'deter_size_s2': 1, 'deter_size_s3': 1, 'deter_size_s4': 1,
+        'deter_size_s1': 200, 'deter_size_s2': 200, 'deter_size_s3': 50, 'deter_size_s4': 50,
         'stoch_size_s1': 20, 'stoch_size_s2': 10, 'stoch_size_s3': 10, 'stoch_size_s4': 10,
         'class_size': 20,
-        'category_size_s1': 20, 'category_size_s2': 1, 'category_size_s3': 1, 'category_size_s4': 1,
+        'category_size_s1': 60, 'category_size_s2': 60, 'category_size_s3': 30, 'category_size_s4': 30,
         'min_std': 0.1
     })
 
