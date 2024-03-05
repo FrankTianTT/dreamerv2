@@ -18,6 +18,8 @@ class MinAtarConfig():
     pixel: bool = True
     action_repeat: int = 1
 
+    algo: str = 'v2'
+
     # buffer desc
     capacity: int = int(2e5)
     obs_dtype: np.dtype = np.uint8
@@ -38,15 +40,16 @@ class MinAtarConfig():
     gif_dir: str = 'results'
 
     # latent space desc
-    rssm_type: str = 'discrete'
+    # rssm_type: str = 'discrete'
+    rssm_type: str = 'continuous'
     embedding_size: int = 200
     rssm_node_size: int = 200
     rssm_info: Dict = field(default_factory=lambda: {
         'deter_size': 200, 'stoch_size': 20, 'category_size': 20,
-        'deter_size_s1': 200, 'deter_size_s2': 200, 'deter_size_s3': 50, 'deter_size_s4': 50,
-        'stoch_size_s1': 20, 'stoch_size_s2': 10, 'stoch_size_s3': 10, 'stoch_size_s4': 10,
+        'deter_size_s1': 150, 'deter_size_s2': 150, 'deter_size_s3': 50, 'deter_size_s4': 50,
+        'stoch_size_s1': 20, 'stoch_size_s2': 20, 'stoch_size_s3': 10, 'stoch_size_s4': 10,
         'class_size': 20,
-        'category_size_s1': 60, 'category_size_s2': 60, 'category_size_s3': 30, 'category_size_s4': 30,
+        'category_size_s1': 40, 'category_size_s2': 40, 'category_size_s3': 20, 'category_size_s4': 20,
         'min_std': 0.1
     })
 

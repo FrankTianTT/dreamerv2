@@ -15,7 +15,7 @@ from dreamerv2.training.if_evaluator import Evaluator
 def main(args):
     wandb.login()
     env_name = args.env
-    exp_id = '{}_{}'.format(args.id, args.obs_type)
+    exp_id = '_'.join(["if", str(args.env), str(args.seed), args.obs_type])
 
     '''make dir for saving results'''
     result_dir = os.path.join('results', '{}_{}'.format(env_name, exp_id))
@@ -58,6 +58,8 @@ def main(args):
     seq_len = args.seq_len
 
     config = MinAtarConfig(
+        algo='if',
+        rssm_type=args.rssm_type,
         env=env_name,
         obs_shape=obs_shape,
         action_size=action_size,
@@ -159,8 +161,9 @@ if __name__ == "__main__":
     """there are tonnes of HPs, if you want to do an ablation over any particular one, please add if here"""
     parser = argparse.ArgumentParser()
     parser.add_argument("--env", type=str, default="breakout", help='mini atari env name')
-    parser.add_argument("--id", type=str, default='0', help='Experiment ID')
+    # parser.add_argument("--id", type=str, default='0', help='Experiment ID')
     parser.add_argument("--obs_type", type=str, default='pixel')
+    parser.add_argument("--rssm_type", type=str, default='discrete', help='rssm type')
     parser.add_argument("--noise_alpha", type=float, default=0.3, help='noise alpha')
     parser.add_argument('--seed', type=int, default=0, help='Random seed')
     parser.add_argument('--device', default='cuda', help='CUDA or CPU')
