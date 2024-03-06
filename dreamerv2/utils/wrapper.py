@@ -111,10 +111,11 @@ class GymMinAtar(gym.Env):
             order=0
         )
         if self.img_source:
-            mask = (rgb_array == (0, 0, 0)).astype(float) * self.noise_alpha
+            mask = (rgb_array == (0, 0, 0)).astype(float)
             img = self.img_source.get_image()
-            rgb_array[rgb_array == (0, 0, 0)] = [1, 1, 1]
-            rgb_array = rgb_array * (1 - mask) + img * mask
+
+            rgb_array = rgb_array * (1 - mask) + np.ones_like(img) * mask
+            rgb_array = rgb_array * (1 - mask * self.noise_alpha) + img * mask * self.noise_alpha
         return rgb_array.astype(np.float32)
 
     def close(self):
